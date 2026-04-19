@@ -1,0 +1,252 @@
+import "Srl/String";
+import "Srl/Console";
+import "Srl/Array";
+import "Srl/Fs";
+import "Srl/System";
+import "Apm";
+Apm.importFile("Alusus/WebPlatform");
+
+use Srl;
+use WebPlatform;
+
+class DocumentItem {
+    def id: Int = 0;
+    def title: String;
+    def sourceUrl: String;
+    def markdown: String;
+}
+
+def nextDocumentId: Int = 1;
+def documents: Array[SrdRef[DocumentItem]];
+
+func sendResponse(conn: ptr[Http.Connection], status: CharsPtr, contentType: CharsPtr, body: String) {
+    Http.print(conn, "HTTP/1.1 %s\r\n", status);
+    Http.print(conn, "Content-Type: %s\r\n", contentType);
+    Http.print(conn, "Cache-Control: no-cache\r\n");
+    Http.print(conn, "Content-Length: %d\r\n\r\n", body.getLength());
+    Http.print(conn, body.buf);
+}
+
+func sendText(conn: ptr[Http.Connection], status: CharsPtr, body: String) {
+    sendResponse(conn, status, "text/plain; charset=utf-8", body);
+}
+
+func sendHtml(conn: ptr[Http.Connection], body: String) {
+    sendResponse(conn, "200 Ok", "text/html; charset=utf-8", body);
+}
+
+func sendJson(conn: ptr[Http.Connection], body: String) {
+    sendResponse(conn, "200 Ok", "application/json; charset=utf-8", body);
+}
+
+func sendError(conn: ptr[Http.Connection], status: CharsPtr, body: String) {
+    sendResponse(conn, status, "application/json; charset=utf-8", String("{\"error\":\"") + jsonEscape(body) + "\"}");
+}
+
+func jsonEscape(value: String): String {
+    return value
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\r", "\\r")
+        .replace("\n", "\\n")
+        .replace("\t", "\\t");
+}
+
+func isAllowedUrlChar(c: Char): Bool {
+    if c >= 'a' and c <= 'z' return true;
+    if c >= 'A' and c <= 'Z' return true;
+    if c >= '0' and c <= '9' return true;
+    if c == ':' return true;
+    if c == '/' return true;
+    if c == '.' return true;
+    if c == '_' return true;
+    if c == '-' return true;
+    if c == '?' return true;
+    if c == '&' return true;
+    if c == '=' return true;
+    if c == '%' return true;
+    if c == '#' return true;
+    if c == '+' return true;
+    return false;
+}
+
+func isValidImportUrl(url: String): Bool {
+    if url.getLength() < 10 return false;
+    if !(String.isEqual(url.slice(0, 7), "http://") or String.isEqual(url.slice(0, 8), "https://")) return false;
+
+    def i: Int;
+    for i = 0, i < url.getLength(), ++i {
+        if !isAllowedUrlChar(url(i)) return false;
+    }
+
+    return true;
+}
+
+func createDocument(title: String, sourceUrl: String, markdown: String): SrdRef[DocumentItem] {
+    def doc: SrdRef[DocumentItem];
+    doc.alloc()~init();
+    doc.id = nextDocumentId;
+    ++nextDocumentId;
+    doc.title = title;
+    doc.sourceUrl = sourceUrl;
+    doc.markdown = markdown;
+    return doc;
+}
+
+func inferTitleFromUrl(url: String): String {
+    def last: String = String("Imported Document");
+    url.split("/").{
+        if this.getLength() > 0 {
+            last = this(this.getLength() - 1);
+        }
+    };
+    if last.getLength() == 0 return String("Imported Document");
+    return last.replace(".md", "").replace("-", " ").replace("_", " ");
+}
+
+func documentExists(url: String): Bool {
+    def i: Int;
+    for i = 0, i < documents.getLength(), ++i {
+        if String.isEqual(documents(i).sourceUrl, url) return true;
+    }
+    return false;
+}
+
+func fetchRemoteMarkdown(url: String, output: ref[String]): Bool {
+    if !isValidImportUrl(url) return false;
+
+    def tempPath: String = String.format("/tmp/docatlas_import_%d.md", nextDocumentId);
+    def cmdCurl: String = String.format(
+        "curl -L -s --fail --max-time 20 \"%s\" -o \"%s\"",
+        url.buf, tempPath.buf
+    );
+    def cmdWget: String = String.format(
+        "wget -q -O \"%s\" \"%s\"",
+        tempPath.buf, url.buf
+    );
+
+    def status: Int = System.exec(cmdCurl);
+    if status != 0 status = System.exec(cmdWget);
+    if status != 0 return false;
+
+    output = Fs.readFile(tempPath);
+    System.exec(String.format("rm -f \"%s\"", tempPath.buf));
+
+    if output.getLength() == 0 return false;
+    return true;
+}
+
+func docsToJson(): String {
+    def result: String = String("[");
+    def i: Int;
+    for i = 0, i < documents.getLength(), ++i {
+        if i != 0 result += ",";
+        result += String("{");
+        result += String.format("\"id\":%d,", documents(i).id);
+        result += String("\"title\":\"") + jsonEscape(documents(i).title) + String("\",");
+        result += String("\"sourceUrl\":\"") + jsonEscape(documents(i).sourceUrl) + String("\",");
+        result += String("\"markdown\":\"") + jsonEscape(documents(i).markdown) + String("\"");
+        result += String("}");
+    }
+    result += "]";
+    return result;
+}
+
+func docsEnvelope(): String {
+    return String("{\"documents\":") + docsToJson() + String("}");
+}
+
+func readRequestBody(conn: ptr[Http.Connection]): String {
+    def bodyBuf: array[Char, 8192];
+    def bodySize: Int = Http.read(conn, bodyBuf~ptr, bodyBuf~size);
+    if bodySize <= 0 return String();
+    return String(bodyBuf~ptr, bodySize);
+}
+
+func importDocumentFromUrl(url: String, errorMessage: ref[String]): Bool {
+    def cleanUrl: String = url.trim();
+    if !isValidImportUrl(cleanUrl) {
+        errorMessage = String("Only safe http/https URLs are accepted.");
+        return false;
+    }
+    if documentExists(cleanUrl) {
+        errorMessage = String("This document was already imported.");
+        return false;
+    }
+
+    def markdown: String;
+    if !fetchRemoteMarkdown(cleanUrl, markdown) {
+        errorMessage = String("Failed to download the markdown file. Ensure curl or wget is installed and the URL is reachable.");
+        return false;
+    }
+
+    documents.add(createDocument(inferTitleFromUrl(cleanUrl), cleanUrl, markdown));
+    return true;
+}
+
+func seedDocuments() {
+    if documents.getLength() != 0 return;
+
+    documents.add(createDocument(
+        String("getting started"),
+        String("https://alusus.org/en/documentation.html"),
+        String("# Getting Started\n")
+            + String("This is a seeded document for the runnable demo.\n\n")
+            + String("Use the **Admin** tab to import a remote markdown file.\n\n")
+            + String("- Search works on title, URL, and markdown body.\n")
+            + String("- Rendering happens in the browser as HTML.\n")
+    ));
+
+    documents.add(createDocument(
+        String("webplatform notes"),
+        String("https://github.com/Alusus/WebPlatform"),
+        String("# WebPlatform Notes\n")
+            + String("A small in-memory example for the company test.\n\n")
+            + String("## Current scope\n")
+            + String("This runnable version focuses on:\n")
+            + String("- modern UI\n")
+            + String("- admin login with `admin / admin123`\n")
+            + String("- remote markdown import\n")
+            + String("- partial text search\n")
+    ));
+}
+
+module serverModules {
+    @beEndpoint["GET", "/"]
+    func home(conn: ptr[Http.Connection]) {
+        sendHtml(conn, Fs.readFile("Assets/index.html"));
+    }
+
+    @beEndpoint["GET", "/api/documents"]
+    func getDocuments(conn: ptr[Http.Connection]) {
+        sendJson(conn, docsEnvelope());
+    }
+
+    @beEndpoint["POST", "/api/import"]
+    func importDocument(conn: ptr[Http.Connection]) {
+        def url: String = readRequestBody(conn).trim();
+        def errorMessage: String;
+
+        if url.getLength() == 0 {
+            sendError(conn, "400 Bad Request", String("Please provide a markdown URL."));
+            return;
+        }
+
+        if !importDocumentFromUrl(url, errorMessage) {
+            sendError(conn, "400 Bad Request", errorMessage);
+            return;
+        }
+
+        sendJson(conn, docsEnvelope());
+    }
+
+    @assetsRoute["/assets/"] def assetsRoute: "Assets/";
+}
+
+func startDocAtlas() {
+    seedDocuments();
+    Console.print("Starting DocAtlas on port 8000...\nURL: http://localhost:8000/\n");
+    buildAndRunServer[serverModules](Array[CharsPtr]({ "listening_ports", "8000", "static_file_max_age", "0" }));
+}
+
+startDocAtlas();

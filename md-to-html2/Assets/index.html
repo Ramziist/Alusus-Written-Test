@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DocAtlas</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div class="brand-dot"></div>
+        <div>
+          <h1>DocAtlas</h1>
+          <p>Markdown document browser</p>
+        </div>
+      </div>
+
+      <nav class="topnav" aria-label="Primary">
+        <button id="tab-browse" class="nav-btn is-active" type="button">Browse</button>
+        <button id="tab-admin" class="nav-btn" type="button">Admin</button>
+      </nav>
+    </header>
+
+    <main class="page">
+      <section id="browse-view" class="view is-active">
+        <div class="hero-card">
+          <div>
+            <span class="eyebrow">Browse documents</span>
+            <h2>Search imported markdown files instantly</h2>
+            <p>Use partial text search across the title, source URL, and markdown content.</p>
+          </div>
+          <div class="hero-stats">
+            <div class="stat-card">
+              <span class="stat-label">Imported docs</span>
+              <strong id="docs-count">0</strong>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Search mode</span>
+              <strong>Partial match</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="search-card">
+          <label for="search-input">Search</label>
+          <div class="search-row">
+            <input id="search-input" type="search" placeholder="Try: webplatform, login, markdown">
+            <button id="clear-search" class="secondary-btn" type="button">Clear</button>
+          </div>
+        </div>
+
+        <div class="browse-grid">
+          <aside class="panel results-panel">
+            <div class="panel-head">
+              <h3>Results</h3>
+              <span id="results-count" class="muted">0 matches</span>
+            </div>
+            <div id="results-list" class="results-list"></div>
+          </aside>
+
+          <section class="panel viewer-panel">
+            <div class="panel-head viewer-head">
+              <div>
+                <h3 id="viewer-title">Select a document</h3>
+                <a id="viewer-url" class="source-link" href="#" target="_blank" rel="noreferrer"></a>
+              </div>
+            </div>
+            <article id="viewer-content" class="markdown-body empty-state">
+              Search or import a document to start browsing.
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <section id="admin-view" class="view">
+        <div class="hero-card">
+          <div>
+            <span class="eyebrow">Administration</span>
+            <h2>Import markdown from a direct URL</h2>
+            <p>This runnable version keeps imported documents in server memory. Login is demo-only by request.</p>
+          </div>
+        </div>
+
+        <div id="login-card" class="panel auth-card">
+          <div class="panel-head">
+            <h3>Admin login</h3>
+          </div>
+          <div class="form-grid">
+            <label>
+              <span>Username</span>
+              <input id="login-username" type="text" placeholder="admin">
+            </label>
+            <label>
+              <span>Password</span>
+              <input id="login-password" type="password" placeholder="admin123">
+            </label>
+          </div>
+          <div class="form-actions">
+            <button id="login-btn" class="primary-btn" type="button">Unlock admin</button>
+            <p id="login-status" class="status-text"></p>
+          </div>
+        </div>
+
+        <div id="admin-panel" class="panel admin-panel is-hidden">
+          <div class="panel-head">
+            <h3>Import a new document</h3>
+          </div>
+
+          <label class="full-width">
+            <span>Direct markdown URL</span>
+            <input id="import-url" type="url" placeholder="https://raw.githubusercontent.com/.../README.md">
+          </label>
+
+          <div class="form-actions">
+            <button id="import-btn" class="primary-btn" type="button">Import document</button>
+            <p id="import-status" class="status-text"></p>
+          </div>
+
+          <div class="import-help">
+            <strong>Good test URL format</strong>
+            <code>https://raw.githubusercontent.com/OWNER/REPO/BRANCH/README.md</code>
+          </div>
+
+          <div class="panel-head imported-head">
+            <h3>Imported documents</h3>
+          </div>
+          <div id="admin-docs" class="admin-docs"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
