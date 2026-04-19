@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مستعرض الوثائق</title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">و</div>
+        <div>
+          <h1>مستعرض الوثائق</h1>
+          <p>تطبيق عربي بسيط لإدارة وعرض وثائق Markdown</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-link active" data-view="browse">التصفح</button>
+        <button class="nav-link" data-view="admin">الإدارة</button>
+      </nav>
+
+      <section class="sidebar-card">
+        <h2>بيانات الدخول</h2>
+        <p>اسم المستخدم: <strong>admin</strong></p>
+        <p>كلمة المرور: <strong>admin123</strong></p>
+      </section>
+
+      <section class="sidebar-card">
+        <h2>ما الذي يفعله التطبيق؟</h2>
+        <ul>
+          <li>يعرض الوثائق المخزنة داخل الذاكرة.</li>
+          <li>يبحث داخل العنوان والرابط والمحتوى.</li>
+          <li>يستورد ملفات Markdown من روابط مباشرة.</li>
+        </ul>
+      </section>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">اختبار خيار الوثائق</p>
+          <h2 id="page-title">تصفح الوثائق</h2>
+        </div>
+        <div class="topbar-actions">
+          <span class="status-pill" id="status-pill">جاهز</span>
+        </div>
+      </header>
+
+      <section id="browse-view" class="view active">
+        <div class="panel search-panel">
+          <div class="panel-heading">
+            <h3>ابحث داخل الوثائق</h3>
+            <p>اكتب كلمة مفتاحية للوصول بسرعة إلى المحتوى المطلوب.</p>
+          </div>
+
+          <div class="search-row">
+            <input id="search-input" type="text" placeholder="مثال: منصة الويب، التثبيت، تسجيل الدخول..." />
+            <button id="clear-search" class="ghost-button">مسح</button>
+          </div>
+        </div>
+
+        <div class="browse-grid">
+          <section class="panel results-panel">
+            <div class="panel-heading">
+              <h3>نتائج البحث</h3>
+              <p id="results-count">0 وثيقة</p>
+            </div>
+            <div id="results-list" class="results-list"></div>
+          </section>
+
+          <section class="panel viewer-panel">
+            <div class="panel-heading">
+              <h3 id="viewer-title">اختر وثيقة</h3>
+              <a id="viewer-source" href="#" target="_blank" rel="noreferrer" class="source-link hidden">فتح المصدر</a>
+            </div>
+            <article id="viewer-content" class="markdown-body empty-state">
+              اختر وثيقة من القائمة لعرضها هنا.
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <section id="admin-view" class="view">
+        <div id="login-card" class="panel auth-panel">
+          <div class="panel-heading">
+            <h3>تسجيل دخول الإدارة</h3>
+            <p>نسخة أولية بحماية بسيطة عبر التحقق المباشر داخل الواجهة.</p>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              <span>اسم المستخدم</span>
+              <input id="username-input" type="text" placeholder="admin" />
+            </label>
+            <label>
+              <span>كلمة المرور</span>
+              <input id="password-input" type="password" placeholder="admin123" />
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button id="login-button" class="primary-button">دخول</button>
+          </div>
+
+          <p id="login-message" class="form-message"></p>
+        </div>
+
+        <div id="admin-panel" class="hidden">
+          <div class="panel import-panel">
+            <div class="panel-heading">
+              <h3>استيراد وثيقة جديدة</h3>
+              <p>ألصق رابطاً مباشراً لملف Markdown ثم اضغط استيراد.</p>
+            </div>
+
+            <label class="full-width">
+              <span>رابط ملف Markdown</span>
+              <input id="import-url-input" type="text" placeholder="https://raw.githubusercontent.com/.../file.md" />
+            </label>
+
+            <div class="action-row">
+              <button id="import-button" class="primary-button">استيراد الوثيقة</button>
+              <button id="logout-button" class="ghost-button">تسجيل الخروج</button>
+            </div>
+
+            <p id="import-message" class="form-message"></p>
+          </div>
+
+          <div class="panel imported-panel">
+            <div class="panel-heading">
+              <h3>الوثائق المتاحة</h3>
+              <p>يمكنك فتح أي وثيقة مباشرة من صفحة التصفح.</p>
+            </div>
+            <div id="admin-docs-list" class="admin-docs-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
